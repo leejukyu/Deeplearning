@@ -44,4 +44,25 @@ early_stopping = keras.callbacks.EarlyStopping(patience=10, restore_best_weights
 history = model.fit(x_train, y_trian, epochs=10, callbacks=[checkpoint])
 ```
 - patience : 일정 에포크 동안 점수가 향상되지 않으면 훈련 멈춤, 최상의 가중치를 복원하므로 저장된 모델을 따로 복원할 필요 없음
-- 
+#### 튜닝 : 하이퍼파라미터가 많으므로 랜덤 탐색 사용
+```
+from scipy.stats import reciprocal
+from sklearn.model_selection import Randomized5earchCV
+param_distribs = {
+  "n hidden" : [0, 1, 2, 3J,
+  "n neurons" np.arange( l, 100),
+  "learningJate" : reciprocal(3e-4, 3e-2),
+}
+rnd_search_cv = Randomized5earchCV(keras_reg, param_distribs, n_iter=10, cv=3)
+rnd_search_cv.fit(X_train, y_train, epochs=100, validation_data=(X_valid, y_valid), callbacks=[keras.callbacks.Early5topping(patience=10)J)
+model = rnd_search_cv.best_estimator_.model
+```
+- randomizedSearchCV는 k-겹 교차 검증을 사용하기 때문에 valid를 사용하지 않고 조기종료에만 사용
+- 탐색 지역이 좋다고 판명되면 더 탐색을 수행하는 여러 라이브러리 사용(ex. Hyperopt, Keras Tuner 등)
+- 은닉층 뉴런 개수 : 점점 줄여서 깔때기처럼 구성, 많은 층과 뉴런을 가진 모델을 선택하고 조기 종료를 사용
+- 학습률 : 최적 학습률은 최대 학습률의 절반 정도, 매우 낮은 학습률에서 시작해서 점진적으로 큰 학습률까지 반복, 손실이 다시 상승하는 지점보다 조금 아래
+- 배치크기 : GPU에 맞는 가장 큰 배치 크기, 큰 배치를 써보고 불안정하거나 만족스럽지 못하면 작은 배치 
+- 규제 : l1,l2,dropout,max_norm
+  - l1, l2 : 연결 가중치를 제한
+  - dropout : 가장 인기 있는 규제 기법, 10~50% 사이, 일부 입력을 랜덤하게 버리고 남은 입력을 보존확률로 나눔, 과대적합되면 비율을 늘림
+  - max-norm : 전체 손실함수에 규제 손실항을 추가하지 않음, 연결 가중치 제한
